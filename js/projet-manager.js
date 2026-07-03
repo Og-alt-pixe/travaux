@@ -77,47 +77,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-   // --- 4. NAVIGATION SUIVANT (VERSION SÉCURISÉE & COMPATIBLE FILTRES) ---
+    // --- 4. NAVIGATION SUIVANT (VERSION AVEC HISTORIQUE FORCE) ---
     const nextLink = document.querySelector('.next-project-link');
     const nextTitle = document.querySelector('.next-title');
     const nextImg = document.querySelector('.next-preview-img');
 
-    // 1. On essaie d'abord de filtrer la liste si un filtre spécifique est actif
     let filteredList = PROJECTS_DATA;
     if (currentFilter && currentFilter !== 'all') {
         filteredList = PROJECTS_DATA.filter(p => p.category === currentFilter);
     }
 
-    // 2. Sécurité : Si le filtre a retourné une liste vide ou ne contient pas le projet actuel
     let filteredIndex = filteredList.findIndex(p => p.id === projectId);
-    
+
     if (filteredIndex === -1) {
-        // Si le projet n'est pas trouvé dans le filtre, on se rabat sur la liste globale complète
         filteredList = PROJECTS_DATA;
         filteredIndex = filteredList.findIndex(p => p.id === projectId);
     }
 
-    // 3. Calcul et injection du projet suivant
     if (filteredIndex !== -1 && filteredList.length > 0) {
-        // On prend le projet suivant (et on retourne au premier si on est à la fin avec le modulo)
         const nextProject = filteredList[(filteredIndex + 1) % filteredList.length];
-        
-        // On crée le lien en propageant proprement le filtre actuel pour le footer
+        const targetUrl = `projets.html?id=${nextProject.id}&filter=${currentFilter}`;
+
         if (nextLink) {
-            nextLink.setAttribute('href', `projets.html?id=${nextProject.id}&filter=${currentFilter}`);
+            nextLink.setAttribute('href', targetUrl);
+
+            // ACTION CRUCIALE : On force le navigateur à ouvrir l'URL comme une NOUVELLE page 
+            // pour l'obliger à créer une étape de retour dans son historique.
+            nextLink.onclick = function (e) {
+                e.preventDefault();
+                window.location.href = targetUrl;
+            };
         }
-        
-        // On injecte le titre (le CSS se charge de le mettre en Uppercase proprement)
+
         if (nextTitle) {
-            nextTitle.textContent = nextProject.title; 
+            nextTitle.textContent = nextProject.title;
         }
-        
-        // On injecte l'image de prévisualisation
+
         if (nextImg) {
             nextImg.src = nextProject.imageHero;
         }
     }
-    
+
     // --- 6. INTERSECTION OBSERVER (Reveal + Play Vidéos) ---
     const observerOptions = { threshold: 0.1 };
 
@@ -187,16 +187,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.addEventListener('touchstart', forcePlayOnTouch, { passive: true });
 
-    // --- 9. GESTION DYNAMIQUE DU BOUTON RETOUR ---
+    // --- 9. BOUTON RETOUR ---
     const backButton = document.getElementById('back-button');
+
     if (backButton) {
-        // Si un filtre est actif dans l'URL de la page projet, on l'applique au retour
-        if (currentFilter && currentFilter !== 'all') {
-            backButton.setAttribute('href', `index.html?filter=${currentFilter}#portfolio`);
-        } else {
-            // Sinon, retour classique à l'accueil
-            backButton.setAttribute('href', 'index.html#portfolio');
-        }
+        backButton.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Si l'utilisateur a un historique sur votre site, on recule d'une seule page exacte
+            if (document.referrer && document.referrer.includes(window.location.hostname)) {
+                history.back();
+            } else {
+                // Sécurité : s'il arrive d'un lien direct externe, le retour l'envoie à l'index
+                window.location.href = `index.html?filter=${currentFilter}#portfolio`;
+            }
+        });
     }
-    
 });
